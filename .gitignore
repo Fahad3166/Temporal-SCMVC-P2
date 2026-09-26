@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+*.egg-info/
+.venv/
+venv/
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+checkpoints/
+models/
+
+# Datasets (NEVER commit raw data)
+HAR_dataset
+data
+*.zip
+*.tar.gz
+
+# Run outputs
+outputs/
+figures/
+runs/
+*.log
+
+# System
+.DS_Store
+.vscode/
+
+# Keep audit index artifacts
+!p2_results/indices/
+!p2_results/indices/*.npz

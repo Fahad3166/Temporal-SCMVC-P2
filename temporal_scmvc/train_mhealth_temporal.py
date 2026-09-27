@@ -48,14 +48,14 @@ setup_seed(args.seed)
 def compute_view_value(rs, H, view):
     weights = []
     H_norm = F.normalize(H, dim=1, eps=1e-8)
-    
+
     for v in range(view):
         r_norm = F.normalize(rs[v], dim=1, eps=1e-8)
         sim = torch.mean(torch.sum(H_norm * r_norm, dim=1))
         sim = torch.clamp(sim, -0.9, 0.9)
         w_v = 0.7 + sim
         weights.append(w_v)
-    
+
     weights = torch.stack(weights)
     weights = torch.clamp(weights, 0.2, 2.0)
     weights = weights / (weights.sum() + 1e-8)
@@ -66,21 +66,21 @@ def pretrain(model, data_loader, optimizer, view, device, epoch):
     model.train()
     mse = torch.nn.MSELoss()
     total_loss = 0.0
-    
+
     for xs, _, _ in data_loader:
         xs = [x.to(device) for x in xs]
         optimizer.zero_grad()
         xrs, _, _, _ = model(xs)
         loss = sum(mse(xs[v], xrs[v]) for v in range(view))
-        
+
         if torch.isnan(loss):
             continue
-            
+
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
         optimizer.step()
         total_loss += loss.item()
-    
+
     avg_loss = total_loss / len(data_loader)
     print(f"[Pretrain] Epoch {epoch:3d} Loss: {avg_loss:.6f}")
     return avg_loss
@@ -90,32 +90,32 @@ def contrastive_train(model, data_loader, optimizer, contrastive_loss_fn, view, 
     model.train()
     mse = torch.nn.MSELoss()
     total_loss = 0.0
-    
+
     for xs, _, _ in data_loader:
         xs = [x.to(device) for x in xs]
         optimizer.zero_grad()
-        
+
         xrs, zs, rs, H = model(xs)
-        
+
         with torch.no_grad():
             w = compute_view_value(rs, H, view)
-        
+
         reconstruction_loss = sum(mse(xs[v], xrs[v]) for v in range(view))
-        
+
         contrastive_loss = 0.0
         for v in range(view):
             contrastive_loss = contrastive_loss + contrastive_loss_fn(H, rs[v], w[v])
-        
+
         loss = reconstruction_loss + contrastive_loss
-        
+
         if torch.isnan(loss):
             continue
-            
+
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
         optimizer.step()
         total_loss += loss.item()
-    
+
     avg_loss = total_loss / len(data_loader)
     print(f"[Train] Epoch {epoch:3d} Loss: {avg_loss:.6f}")
     return avg_loss
@@ -129,7 +129,9 @@ print("="*50)
 dataset, dims, view, data_size, class_num = load_mhealth_temporal(
     max_samples=args.max_samples,
     window_size=args.window_size,
-    stride=25
+    stride=25,
+    seed=args.seed,
+    sample_strategy="stratified",
 )
 
 data_loader = torch.utils.data.DataLoader(
@@ -190,20 +192,20 @@ print("CONTRASTIVE TRAINING PHASE - MHEALTH TEMPORAL")
 print("="*50)
 for epoch in range(1, args.con_epochs + 1):
     contrastive_train(model, data_loader, optimizer, contrastive_loss_fn, view, device, epoch)
-    
+
     acc, nmi, pur = valid(
         model, device, dataset, view, data_size, class_num,
         eval_h=True, epoch=epoch
     )
-    
+
     scheduler.step(acc)
-    
+
     if acc > best_acc:
         best_acc = acc
         best_nmi = nmi
         best_pur = pur
         best_epoch = epoch
-        
+
         os.makedirs("./models", exist_ok=True)
         torch.save(model.state_dict(), "./models/mhealth_temporal_best.pth")
         print(f"  >>> New best model saved (ACC={acc:.4f})")

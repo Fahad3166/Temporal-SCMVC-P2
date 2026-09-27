@@ -156,7 +156,9 @@ def load_har_temporal(
 
     # full-length metadata before slicing
     total_windows = len(labels)
-    full_window_starts = np.arange(total_windows, dtype=np.int64)
+    har_row_index = np.arange(total_windows, dtype=np.int64)
+    full_window_starts = har_row_index * int(views[0].shape[1])
+
 
     # stratified sampling (or keep all)
     if max_samples is not None and len(labels) > max_samples:

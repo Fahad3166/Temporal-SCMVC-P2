@@ -9,6 +9,11 @@ from sampling import sample_indices
 from save_indices import save_window_indices
 
 
+# WISDM was recorded at ~20 Hz. We resample all views onto this grid.
+WISDM_TARGET_HZ = 20.0
+WISDM_TARGET_DT = 1.0 / WISDM_TARGET_HZ  # 0.05 s
+
+
 class WISDMTemporalDataset(Dataset):
     def __init__(self, views, labels):
         self.views = views
@@ -88,46 +93,127 @@ def _collect_files_from_dir(folder_path):
     return sorted(files)
 
 
-def _build_windows(file_list, window_size=200, max_files=None):
+def _group_by_subject_activity(rows):
     """
-    Build temporal windows.
+    Group raw rows by (subject, activity). Each group keeps a list of
+    (timestamp, x, y, z) tuples.
+    """
+    grouped = {}
+    for subject, activity, timestamp, x, y, z in rows:
+        key = (subject, activity)
+        grouped.setdefault(key, []).append((timestamp, x, y, z))
+
+    # sort each group by timestamp
+    for key in grouped:
+        grouped[key].sort(key=lambda t: t[0])
+
+    return grouped
+
+
+def _resample_group_to_grid(group, target_dt):
+    """
+    Given a sorted list of (timestamp, x, y, z) for one (subject, activity),
+    return (t_seconds, xyz_array) resampled onto a uniform grid of step target_dt.
+
+    Steps:
+      1. Zero the timestamps relative to the first sample.
+      2. Convert to seconds.
+      3. Build the uniform grid from 0 to the max time in seconds.
+      4. Linear-interpolate each of x, y, z onto that grid.
+    """
+    if len(group) < 2:
+        return None, None
+
+    t0 = group[0][0]
+    # timestamps in WISDM are nanoseconds
+    times = np.array([(ts - t0) / 1e9 for ts, _, _, _ in group], dtype=np.float64)
+    values = np.array([[x, y, z] for _, x, y, z in group], dtype=np.float32)
+
+    # drop duplicate timestamps (keep first) to keep np.interp happy
+    uniq_mask = np.concatenate(([True], np.diff(times) > 0))
+    times = times[uniq_mask]
+    values = values[uniq_mask]
+
+    if len(times) < 2:
+        return None, None
+
+    t_end = times[-1]
+    n_steps = int(np.floor(t_end / target_dt)) + 1
+    if n_steps < 2:
+        return None, None
+
+    grid = np.arange(n_steps, dtype=np.float64) * target_dt
+
+    resampled = np.empty((n_steps, 3), dtype=np.float32)
+    for c in range(3):
+        resampled[:, c] = np.interp(grid, times, values[:, c]).astype(np.float32)
+
+    return grid, resampled
+
+
+def _build_aligned_windows(
+    view_groups,        # dict: view_name -> {(subject, activity) -> [(ts, x, y, z), ...]}
+    window_size,        # number of samples per window
+    target_dt,          # seconds per sample after resampling
+):
+    """
+    For each (subject, activity) present in ALL selected views:
+      - resample each view onto a uniform grid
+      - truncate all views to their common minimum length
+      - extract non-overlapping windows of length `window_size`
 
     Returns:
-        windows: dict keyed by (subject, activity, w_idx) -> (chunk, start_row)
-            chunk shape: [window_size, 3]
-            start_row:   int, the row index in the raw per-(subject, activity)
-                         sequence where this window starts
+        aligned: dict keyed by (subject, activity, w_idx) ->
+                 { "views": {view_name: np.array[window_size, 3]},
+                   "start_sample": int (start index in resampled grid) }
     """
-    windows = {}
+    view_names = list(view_groups.keys())
 
-    if max_files is not None:
-        file_list = file_list[:max_files]
+    # collect common (subject, activity) keys across views
+    common_keys = None
+    for name in view_names:
+        keys = set(view_groups[name].keys())
+        common_keys = keys if common_keys is None else (common_keys & keys)
+    common_keys = sorted(common_keys)
 
-    for filepath in file_list:
-        rows = _load_sensor_file(filepath)
-        if not rows:
+    aligned = {}
+
+    for key in common_keys:
+        subject, activity = key
+
+        per_view_signals = {}
+        min_len = None
+        ok = True
+
+        for name in view_names:
+            group = view_groups[name][key]
+            grid, resampled = _resample_group_to_grid(group, target_dt)
+            if resampled is None:
+                ok = False
+                break
+            per_view_signals[name] = resampled
+            min_len = len(resampled) if min_len is None else min(min_len, len(resampled))
+
+        if not ok or min_len is None or min_len < window_size:
             continue
 
-        by_group = {}
+        num_windows = min_len // window_size
 
-        for subject, activity, timestamp, x, y, z in rows:
-            key = (subject, activity)
-            by_group.setdefault(key, []).append((timestamp, x, y, z))
+        for w_idx in range(num_windows):
+            start = w_idx * window_size
+            end = start + window_size
 
-        for (subject, activity), seq in by_group.items():
-            seq.sort(key=lambda t: t[0])
+            views_for_key = {
+                name: per_view_signals[name][start:end].copy()
+                for name in view_names
+            }
 
-            arr = np.array([[x, y, z] for _, x, y, z in seq], dtype=np.float32)
+            aligned[(subject, activity, w_idx)] = {
+                "views": views_for_key,
+                "start_sample": int(start),
+            }
 
-            num_windows = len(arr) // window_size
-
-            for w_idx in range(num_windows):
-                start = w_idx * window_size
-                end = start + window_size
-                chunk = arr[start:end]  # [window_size, 3]
-                windows[(subject, activity, w_idx)] = (chunk, int(start))
-
-    return windows
+    return aligned
 
 
 def _standardize_view_windows(v):
@@ -173,75 +259,73 @@ def load_wisdm_temporal(
     for name, folder in folder_map.items():
         print(f"{name}: {folder}")
 
-    sensor_files = {}
-
-    print("\nDetected files per view:")
-    for name, folder in folder_map.items():
-        files = _collect_files_from_dir(folder)
-        sensor_files[name] = files
-        print(f"{name}: {len(files)} files")
-
     print("\nSelected WISDM views:", selected_names)
+    print(f"Resampling all views to common grid: {WISDM_TARGET_HZ} Hz "
+          f"(dt={WISDM_TARGET_DT*1000:.2f} ms)")
 
-    sensor_windows = {}
+    # ---- load and group per view ----
+    view_groups = {}
 
     for name in selected_names:
-        files = sensor_files[name]
+        folder = folder_map[name]
+        files = _collect_files_from_dir(folder)
 
         if len(files) == 0:
             raise FileNotFoundError(
-                f"No files found for view '{name}' under {folder_map[name]}"
+                f"No files found for view '{name}' under {folder}"
             )
 
-        sensor_windows[name] = _build_windows(
-            files,
-            window_size=window_size,
-            max_files=max_files_per_view,
-        )
+        if max_files_per_view is not None:
+            files = files[:max_files_per_view]
 
-        print(f"{name}: {len(sensor_windows[name])} windows")
+        rows = []
+        for fpath in files:
+            rows.extend(_load_sensor_file(fpath))
 
-    common_keys = None
+        view_groups[name] = _group_by_subject_activity(rows)
+        print(f"{name}: {len(files)} files, "
+              f"{len(view_groups[name])} (subject, activity) groups")
 
-    for name in selected_names:
-        keys = set(sensor_windows[name].keys())
-        common_keys = keys if common_keys is None else (common_keys & keys)
+    # ---- aligned windows across all selected views ----
+    aligned = _build_aligned_windows(
+        view_groups,
+        window_size=window_size,
+        target_dt=WISDM_TARGET_DT,
+    )
 
-    common_keys = sorted(common_keys)
-
-    if len(common_keys) == 0:
+    if len(aligned) == 0:
         raise RuntimeError("No aligned windows found across selected WISDM views.")
 
-    print("Aligned windows across selected views:", len(common_keys))
+    print("Aligned windows across selected views:", len(aligned))
 
+    # ---- build label map and materialize tensors ----
     label_map = {}
     next_label = 0
 
     views = [[] for _ in selected_names]
     labels = []
     subjects = []
-    start_rows = []
+    start_samples = []
 
-    for key in common_keys:
+    for key in sorted(aligned.keys()):
         subject, activity, w_idx = key
+        entry = aligned[key]
 
         if activity not in label_map:
             label_map[activity] = next_label
             next_label += 1
 
         for i, name in enumerate(selected_names):
-            chunk, _start = sensor_windows[name][key]
-            views[i].append(chunk)
+            views[i].append(entry["views"][name])
 
         labels.append(label_map[activity])
         subjects.append(subject)
-        # start row = w_idx * window_size (non-overlapping windows)
-        start_rows.append(int(w_idx) * window_size)
+        start_samples.append(entry["start_sample"])
 
     views = [np.array(v, dtype=np.float32) for v in views]
     labels = np.array(labels, dtype=np.int64)
     subjects = np.array(subjects, dtype=np.int64)
-    start_rows = np.array(start_rows, dtype=np.int64)
+    start_samples = np.array(start_samples, dtype=np.int64)
 
     total_windows = len(labels)
 
@@ -254,7 +338,7 @@ def load_wisdm_temporal(
     views = [v[indices] for v in views]
     labels = labels[indices]
     subjects = subjects[indices]
-    start_rows = start_rows[indices]
+    start_samples = start_samples[indices]
 
     # ---- standardize each view ----
     views = [_standardize_view_windows(v) for v in views]
@@ -263,17 +347,20 @@ def load_wisdm_temporal(
     save_window_indices(
         dataset="wisdm",
         seed=seed,
-        window_starts=start_rows,
+        window_starts=start_samples,
         subject_ids=subjects,
         sampled_indices=indices,
         window_length=window_size,
-        stride=window_size,  # non-overlapping by construction
+        stride=window_size,  # non-overlapping on the resampled grid
         extra={
             "total_windows": int(total_windows),
             "window_size": int(window_size),
-            "max_files_per_view": int(max_files_per_view),
+            "max_files_per_view": int(max_files_per_view) if max_files_per_view else -1,
             "selected_views": selected_names,
             "label_map": label_map,
+            "resample_hz": float(WISDM_TARGET_HZ),
+            "resample_dt_seconds": float(WISDM_TARGET_DT),
+            "alignment": "timestamp-resampled to common 20 Hz grid per (subject, activity)",
         },
         save_dir=str(_default_indices_dir()),
     )

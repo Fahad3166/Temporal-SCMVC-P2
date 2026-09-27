@@ -53,13 +53,16 @@ setup_seed(args.seed)
 # ========================
 # LOAD DATA
 # ========================
+
 dataset, dims, view, data_size, class_num = load_wisdm_temporal(
     window_size=args.window_size,
     max_files_per_view=args.max_files_per_view,
     selected_view_indices=[0, 1, 2],  # phone_accel, phone_gyro, watch_accel
     max_samples=args.max_samples,
-    seed=args.seed
+    seed=args.seed,
+    sample_strategy="stratified",
 )
+
 
 data_loader = torch.utils.data.DataLoader(
     dataset,

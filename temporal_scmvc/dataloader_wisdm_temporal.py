@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import Dataset
 
 from sampling import sample_indices
+from save_indices import save_window_indices
 
 
 class WISDMTemporalDataset(Dataset):
@@ -20,6 +21,22 @@ class WISDMTemporalDataset(Dataset):
         xs = [torch.tensor(v[idx], dtype=torch.float32) for v in self.views]
         y = torch.tensor(self.labels[idx], dtype=torch.long)
         return xs, y, idx
+
+
+def _default_wisdm_root():
+    repo_root = Path(__file__).resolve().parents[1]
+    return (
+        repo_root
+        / "data"
+        / "wisdm+smartphone+and+smartwatch+activity+and+biometrics+dataset"
+        / "wisdm-dataset"
+        / "raw"
+    )
+
+
+def _default_indices_dir():
+    repo_root = Path(__file__).resolve().parents[1]
+    return repo_root / "p2_results" / "indices"
 
 
 def _parse_line(line: str):
@@ -75,9 +92,11 @@ def _build_windows(file_list, window_size=200, max_files=None):
     """
     Build temporal windows.
 
-    Important:
-    We keep each window as [window_size, 3].
-    We do NOT flatten to [window_size * 3].
+    Returns:
+        windows: dict keyed by (subject, activity, w_idx) -> (chunk, start_row)
+            chunk shape: [window_size, 3]
+            start_row:   int, the row index in the raw per-(subject, activity)
+                         sequence where this window starts
     """
     windows = {}
 
@@ -105,19 +124,13 @@ def _build_windows(file_list, window_size=200, max_files=None):
             for w_idx in range(num_windows):
                 start = w_idx * window_size
                 end = start + window_size
-
                 chunk = arr[start:end]  # [window_size, 3]
-
-                windows[(subject, activity, w_idx)] = chunk
+                windows[(subject, activity, w_idx)] = (chunk, int(start))
 
     return windows
 
 
 def _standardize_view_windows(v):
-    """
-    Standardize one view across all windows and timesteps.
-    v shape: [num_windows, time, features]
-    """
     n, t, d = v.shape
     flat = v.reshape(n * t, d)
 
@@ -138,19 +151,9 @@ def load_wisdm_temporal(
     selected_view_indices=None,
     max_samples=1000,
     seed=42,
-    sample_strategy="stratified"
+    sample_strategy="stratified",
 ):
-    if data_root is None:
-        repo_root = Path(__file__).resolve().parents[1]
-        data_root = (
-            repo_root
-            / "data"
-            / "wisdm+smartphone+and+smartwatch+activity+and+biometrics+dataset"
-            / "wisdm-dataset"
-            / "raw"
-        )
-    else:
-        data_root = Path(data_root)
+    data_root = Path(data_root) if data_root is not None else _default_wisdm_root()
 
     folder_map = {
         "phone_accel": os.path.join(data_root, "phone", "accel"),
@@ -186,12 +189,14 @@ def load_wisdm_temporal(
         files = sensor_files[name]
 
         if len(files) == 0:
-            raise FileNotFoundError(f"No files found for view '{name}' under {folder_map[name]}")
+            raise FileNotFoundError(
+                f"No files found for view '{name}' under {folder_map[name]}"
+            )
 
         sensor_windows[name] = _build_windows(
             files,
             window_size=window_size,
-            max_files=max_files_per_view
+            max_files=max_files_per_view,
         )
 
         print(f"{name}: {len(sensor_windows[name])} windows")
@@ -214,6 +219,8 @@ def load_wisdm_temporal(
 
     views = [[] for _ in selected_names]
     labels = []
+    subjects = []
+    start_rows = []
 
     for key in common_keys:
         subject, activity, w_idx = key
@@ -223,21 +230,53 @@ def load_wisdm_temporal(
             next_label += 1
 
         for i, name in enumerate(selected_names):
-            views[i].append(sensor_windows[name][key])
+            chunk, _start = sensor_windows[name][key]
+            views[i].append(chunk)
 
         labels.append(label_map[activity])
+        subjects.append(subject)
+        # start row = w_idx * window_size (non-overlapping windows)
+        start_rows.append(int(w_idx) * window_size)
 
     views = [np.array(v, dtype=np.float32) for v in views]
     labels = np.array(labels, dtype=np.int64)
+    subjects = np.array(subjects, dtype=np.int64)
+    start_rows = np.array(start_rows, dtype=np.int64)
 
-    # random sampling after alignment
-    if max_samples is not None and len(labels) > max_samples:
+    total_windows = len(labels)
+
+    # ---- sampling ----
+    if max_samples is not None and total_windows > max_samples:
         indices = sample_indices(labels, max_samples, seed, sample_strategy)
-        views = [v[indices] for v in views]
-        labels = labels[indices]
+    else:
+        indices = np.arange(total_windows, dtype=np.int64)
 
-    # standardize each view
+    views = [v[indices] for v in views]
+    labels = labels[indices]
+    subjects = subjects[indices]
+    start_rows = start_rows[indices]
+
+    # ---- standardize each view ----
     views = [_standardize_view_windows(v) for v in views]
+
+    # ---- save preprocessing indices ----
+    save_window_indices(
+        dataset="wisdm",
+        seed=seed,
+        window_starts=start_rows,
+        subject_ids=subjects,
+        sampled_indices=indices,
+        window_length=window_size,
+        stride=window_size,  # non-overlapping by construction
+        extra={
+            "total_windows": int(total_windows),
+            "window_size": int(window_size),
+            "max_files_per_view": int(max_files_per_view),
+            "selected_views": selected_names,
+            "label_map": label_map,
+        },
+        save_dir=str(_default_indices_dir()),
+    )
 
     print("\nUnique labels after sampling:", np.unique(labels))
     print("Label map:", label_map)
@@ -251,5 +290,4 @@ def load_wisdm_temporal(
     class_num = len(np.unique(labels))
 
     dataset = WISDMTemporalDataset(views, labels)
-
     return dataset, dims, view, data_size, class_num

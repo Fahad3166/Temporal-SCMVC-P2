@@ -52,10 +52,13 @@ setup_seed(args.seed)
 # ========================
 # LOAD DATA
 # ========================
+
 dataset, dims, view, data_size, class_num = load_pamap2_temporal(
     window_size=args.window_size,
     stride=args.stride,
-    max_samples=args.max_samples
+    max_samples=args.max_samples,
+    seed=args.seed,
+    sample_strategy="stratified",
 )
 
 data_loader = torch.utils.data.DataLoader(

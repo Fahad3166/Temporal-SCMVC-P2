@@ -210,6 +210,7 @@ def load_pamap2_temporal(
         window_starts=start_positions,
         subject_ids=subject_windows,
         sampled_indices=indices,
+        labels=y_windows,
         window_length=window_size,
         stride=stride,
         extra={

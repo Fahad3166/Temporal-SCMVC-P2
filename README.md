@@ -39,6 +39,25 @@ Datasets are **not** included. Download HAR, WISDM, PAMAP2, MHEALTH from the UCI
     data/MHEALTHDATASET/
     data/pamap2+physical+activity+monitoring/PAMAP2_Dataset/Protocol/
     data/wisdm+smartphone+and+smartwatch+activity+and+biometrics+dataset/wisdm-dataset/
+    
+## Index file layout (`p2_results/indices/*.npz`)
+
+Each `.npz` file corresponds to one (dataset, seed). Keys:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `window_starts` | int64 | Raw-sample offset where each sampled window begins |
+| `subject_ids` | int64 | Subject identifier per sampled window |
+| `sampled_indices` | int64 | Positions of sampled windows in the pre-sampling pool |
+| `labels` | int64 | Class label per sampled window (post-reindex where applicable) |
+| `window_length` | int | Samples per window |
+| `stride` | int | Samples between consecutive window starts |
+| `extra` | dict | Dataset-specific metadata (view_mode, label_map, resample_hz, etc.) |
+
+Rationale: saving these fields makes the exact preprocessing deterministic and
+lets a reviewer recompute class × subject contingency tables, overlap metrics,
+and sampling statistics without re-running the loaders. `labels` was added
+after the first audit pass at the supervisor's suggestion.
 
 ## Reproduce
 

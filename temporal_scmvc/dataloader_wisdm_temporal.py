@@ -350,6 +350,7 @@ def load_wisdm_temporal(
         window_starts=start_samples,
         subject_ids=subjects,
         sampled_indices=indices,
+        labels=labels,
         window_length=window_size,
         stride=window_size,  # non-overlapping on the resampled grid
         extra={

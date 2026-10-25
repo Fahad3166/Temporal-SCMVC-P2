@@ -78,6 +78,8 @@ def _load_per_subject(data_path):
         keep = y_sub != 0
         X_sub = X_sub[keep]
         y_sub = y_sub[keep]
+         # reindex to 0-based class IDs for consistency with other datasets
+        y_sub = y_sub - 1
 
         X_list.append(X_sub)
         y_list.append(y_sub)
@@ -197,6 +199,7 @@ def load_mhealth_temporal(
         window_starts=start_positions,
         subject_ids=subj_windows,
         sampled_indices=indices,
+        labels=y_windows,
         window_length=window_size,
         stride=stride,
         extra={

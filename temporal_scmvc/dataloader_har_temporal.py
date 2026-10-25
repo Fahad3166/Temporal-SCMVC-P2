@@ -187,8 +187,9 @@ def load_har_temporal(
         window_starts=window_starts,
         subject_ids=subjects,
         sampled_indices=indices,
+        labels=labels,
         window_length=window_length,
-        stride=window_length,   # HAR windows are non-overlapping by construction
+        stride=window_length,
         extra={"view_mode": view_mode, "split": split, "total_windows": total_windows},
         save_dir=str(_default_indices_dir()),
     )

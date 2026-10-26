@@ -186,11 +186,81 @@ for non-overlapping windows.
 
 ---
 
-## Part C — Subject leakage
+## Part C — Subject leakage analysis
 
-_(to be completed)_
+### C.1 What "subject leakage" means for clustering
 
----
+In supervised classification, subject leakage is defined as the same subject appearing
+in both training and test sets. In unsupervised clustering, there is no train/test
+split — every window participates in the k-means evaluation. The analogous concern
+is **subject imbalance**: if a small number of subjects contribute most of the
+sampled windows, or if some classes come from only a few subjects, the resulting
+clusters may reflect subject identity (personal gait, sensor placement style)
+rather than activity identity.
+
+We quantify three things per dataset × seed:
+
+1. **Gini coefficient** of subject window counts. 0 = perfectly balanced; 1 = one
+   subject dominates.
+2. **Per-class subject coverage** — the number of distinct subjects that contribute
+   at least one sampled window for each class.
+3. **Top-3 subject share** — combined sample share of the three most frequent
+   subjects.
+
+### C.2 Implementation
+
+Script: `temporal_scmvc/verify_subject_leakage.py`.
+It reads the saved `.npz` index files and prints, per dataset × seed, the Gini
+coefficient, per-class subject coverage, and the top-3 subjects by window count.
+
+### C.3 Results
+
+| Dataset | Gini (seeds 0–2) | max subject share | min subject share | min subjects per class | Verdict |
+|---|---|---|---|---|---|
+| HAR | 0.055 – 0.064 | 0.058 | 0.039 | 21 / 21 | Balanced |
+| MHEALTH | 0.021 – 0.026 | 0.10 | 0.09 | 10 / 10 | Balanced |
+| PAMAP2 | 0.160 – 0.174 | 0.15 | 0.002 | 5 – 6 / 9 | **Noticeable imbalance** |
+| WISDM | 0.017 – 0.021 | 0.056 | 0.047 | 17 / 19 | Balanced |
+
+### C.4 Discussion
+
+**HAR, MHEALTH, WISDM are well-balanced.** Every sampled activity appears from
+essentially all subjects in each dataset. HAR: 21/21 subjects cover every class.
+MHEALTH: 10/10. WISDM: minimum 17/19. No subject dominates.
+
+**PAMAP2 shows a genuine imbalance that must be reported.** Three observations:
+
+1. Gini ≈ 0.17, roughly 10× higher than the other datasets.
+2. One subject contributes ~15 % of the sample; another contributes only ~0.2 %
+   (roughly 10–20 windows out of 5,000).
+3. Some activity classes appear from only 5 of 9 subjects.
+
+The likely cause: PAMAP2's Protocol files include activities that not all subjects
+performed for the full duration, plus non-uniform session lengths across subjects.
+The imbalance is not introduced by our preprocessing — it comes from the raw data.
+
+**Consequence for results.** PAMAP2 clustering scores (ACC ~0.36–0.40, NMI ~0.29–0.32)
+may partially reflect subject-style clustering rather than pure activity clustering.
+This must be flagged in the paper's limitations, and future work should consider
+subject-balanced stratified sampling.
+
+We do **not** modify the pipeline now, because doing so would invalidate the seeds
+and results already produced. Instead, we document the imbalance and treat it as
+a known caveat.
+
+**WISDM coverage caveat.** WISDM uses `max_files_per_view=20`, which selects the
+first 20 files alphabetically per view. This limits the sample to 19 of the 51+
+subjects in the WISDM dataset. The subject balance within those 19 is excellent,
+but the paper should note the restricted subject coverage.
+
+### C.5 Reproduce
+
+```bash
+conda activate scmvc
+cd temporal_scmvc
+python verify_subject_leakage.py
+```
+
 
 ## Part D — ACC implementation and k-means initialization
 

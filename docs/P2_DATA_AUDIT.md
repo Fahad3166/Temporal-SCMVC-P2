@@ -3,7 +3,7 @@
 **Project:** Temporal SCMVC — P2
 **Author:** Fahad Ali Abbasi
 **Supervisor:** Yllka Velaj
-**Status:** Sections A–D complete; Part E pending.
+**Status:** All sections (A–E) complete..
 **Last updated:** October 26, 2026
 **Last updated:** _(fill in date)_
 
@@ -339,7 +339,59 @@ constructing the confusion matrix.
 
 ## Part E — Parameter counts
 
-_(to be completed)_
+### E.1 Method
+
+Parameter counts were obtained by instantiating each model with the same
+`dims`, `feature_dim=128`, and `high_feature_dim=64` settings used in the
+controlled experiments, then summing `p.numel()` over all parameters (see
+the `print(f"parameters     : {sum(p.numel() for p in model.parameters())}")`
+call in each training script). No training is required; only instantiation.
+
+### E.2 Results
+
+Total trainable parameters per (dataset, architecture):
+
+| Dataset | MLP (flattened SCMVC) | TCN-SCMVC | LSTM-SCMVC |
+|---|---:|---:|---:|
+| HAR | 10,330,800 | 4,582,336 | 1,492,480 |
+| MHEALTH | 10,328,798 | 4,588,990 | 1,499,134 |
+| PAMAP2 | 14,831,144 | 6,386,856 | 2,267,048 |
+| WISDM | 14,630,944 | 6,314,976 | 2,195,168 |
+
+### E.3 Interpretation
+
+Three observations:
+
+1. **The MLP baseline is not parameter-starved.** With 10–15M parameters,
+   the flattened SCMVC architecture has the highest capacity of the three
+   methods. It is a competitive baseline, not a weak one.
+
+2. **Temporal encoders operate with substantially fewer parameters.** TCN
+   uses ~4.6–6.4M and LSTM uses ~1.5–2.3M, i.e. **2–7× fewer parameters**
+   than MLP. Therefore, when temporal encoders outperform MLP (e.g. LSTM
+   on HAR and MHEALTH), the improvement cannot be attributed to increased
+   model capacity.
+
+3. **Parameter counts vary slightly across datasets because view dimensions
+   differ.** MLP counts depend on `sum(flattened_dim_v)` per dataset; TCN
+   and LSTM counts depend on the per-view input feature dimensions. The
+   variation across datasets is expected and reflects only the difference
+   in input dimensionality, not architectural changes.
+
+### E.4 Reproduce
+
+```bash
+conda activate scmvc
+cd temporal_scmvc
+for ds in har mhealth pamap2 wisdm; do
+  for method in mlp tcn lstm; do
+    echo "=== $ds $method ==="
+    python train_temporal_$method.py --dataset $ds --max_samples 5000 --seed 0 --pre_epochs 0 --con_epochs 0 --no_save 2>&1 | grep -iE "parameters|dims"
+  done
+done
+```
+
+(For WISDM, add `--wisdm_max_files_per_view 20` to match the controlled runs.)
 
 ---
 

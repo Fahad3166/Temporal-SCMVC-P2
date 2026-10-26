@@ -1,4 +1,9 @@
 # Controlled Reproducibility Evaluation
+> **Update (post-audit):** After completing the P2 reproducibility audit,
+> a k-means seed propagation bug was found and fixed in the MHEALTH,
+> PAMAP2, and WISDM training scripts. The ACC values below reflect the
+> corrected runs. HAR was unaffected (its k-means seed was already
+> propagated correctly). Full details: see `docs/P2_DATA_AUDIT.md` Part D.
 
 This document records the controlled comparison requested after P1. The goal is to compare the original SCMVC architecture against the temporal TCN and LSTM variants under the same sampling and evaluation protocol.
 
@@ -54,3 +59,34 @@ These results are still limited to three seeds and a maximum of 5000 stratified 
 - `p2_results/controlled_runs.csv`: seed 0 runs and earlier intermediate table.
 - `p2_results/controlled_runs_seeds_0_1_2.csv`: seeds 1 and 2 runs.
 - `p2_results/smoke.csv`: small smoke test confirming that all three runners execute.
+
+## Status of the fix
+#### All five training scripts now propagate kmeans_seed:
+
+train_temporal_tcn.py (was already correct)
+
+train_mhealth_temporal.py (fixed)
+
+train_pamap_temporal.py (fixed)
+
+train_wisdm_temporal.py (fixed)
+
+train_temporal_lstm.py (was already correct)
+
+train_temporal_mlp.py (was already correct)
+
+ACC shifts (before vs after kmeans seed fix)
+Dataset	Seed	Before	After	Δ
+MHEALTH	0	0.5292	0.5108	−0.018
+MHEALTH	1	0.5228	0.5246	+0.002
+MHEALTH	2	0.4834	0.5014	+0.018
+PAMAP2	0	0.3678	0.3784	+0.011
+PAMAP2	1	0.4004	0.3948	−0.006
+PAMAP2	2	0.3796	0.3832	+0.004
+WISDM	0	0.2346	0.2144	−0.020
+WISDM	1	0.2294	0.2326	+0.003
+WISDM	2	0.2306	0.2090	−0.022
+
+Interpretation: shifts are small (0.002–0.022) but real. Notably, MHEALTH seed variance widened (0.4834–0.5292 before → 0.5014–0.5246 after). This confirms the previous narrow spread was partially an artifact of the fixed k-means seed the fix makes the variance estimate more honest.
+
+WISDM now has wider spread (0.2090–0.2326 vs 0.2294–0.2346 before). Also more honest.

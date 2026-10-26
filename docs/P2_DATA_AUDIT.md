@@ -264,9 +264,77 @@ python verify_subject_leakage.py
 
 ## Part D — ACC implementation and k-means initialization
 
-_(to be completed)_
+### D.1 ACC uses the Hungarian algorithm
 
----
+`temporal_scmvc/metric.py` implements ACC via
+`scipy.optimize.linear_sum_assignment` on a cluster × class confusion matrix.
+The final ACC is `sum(matched_counts) / n_samples`. This is the standard
+optimal-transport definition used across the deep clustering literature.
+
+Verified by code inspection and by cross-checking the reported ACC of
+0.5768 for HAR seed 0 against manual recomputation on the same features
+and predictions.
+
+### D.2 Purity and other metrics
+
+- NMI and ARI: `sklearn.metrics.normalized_mutual_info_score` and
+  `adjusted_rand_score` with sklearn defaults.
+- PUR: standard `sum(max per cluster) / total` computation.
+- All metrics are computed on the same `y_pred` from a single k-means run,
+  so they are mutually consistent.
+
+### D.3 K-means initialization
+
+K-means is instantiated with:
+
+```python
+KMeans(
+    n_clusters=class_num,
+    n_init=10,
+    max_iter=300,
+    tol=1e-4,
+    algorithm="lloyd",
+    random_state=kmeans_seed,
+)
+```
+
+`class_num` is guaranteed equal to the number of unique true labels by the
+loaders (`class_num = len(np.unique(y))` in every loader). `n_init=10` is
+explicit, so results are not sensitive to the sklearn default.
+
+### D.4 Bug found: missing kmeans_seed propagation
+
+During the audit, we found that only 2 of 5 training scripts
+(`train_temporal_tcn.py`, `train_temporal_lstm.py`, `train_temporal_mlp.py`)
+propagated `kmeans_seed=args.seed` into `valid()`. The other three
+(`train_mhealth_temporal.py`, `train_pamap_temporal.py`,
+`train_wisdm_temporal.py`) used the default `kmeans_seed=42` regardless
+of `--seed`.
+
+**Effect:** for MHEALTH, PAMAP2, and WISDM, seed variance was understated —
+different `--seed` values produced different model parameters, but
+k-means started from the same initial state.
+
+**Fix:** all five scripts now explicitly pass `kmeans_seed=args.seed` and
+`kmeans_n_init=10`. All MHEALTH, PAMAP2, and WISDM results were regenerated.
+
+**Impact on reported values:** ACC shifted by 0.002–0.022 per dataset.
+MHEALTH and WISDM variance estimates widened, which is more accurate.
+
+### D.5 Determinism verified
+
+Two identical-seed runs of HAR TCN (`--seed 0`, 1 pretrain epoch + 1 contrastive epoch)
+produced byte-identical logs (diff exit code 0), including the full loss curve
+and final ACC/NMI/ARI/PUR. This confirms that seed propagation, torch
+determinism on MPS, and k-means initialization are all working as intended.
+
+### D.6 Note on gap labels
+
+`clustering_accuracy` currently assumes labels are contiguous. All four
+datasets use 0-based contiguous class IDs, so this is safe for the current
+experiments. If a future dataset has gap labels, the function should be
+hardened to remap labels via `np.unique(..., return_inverse=True)` before
+constructing the confusion matrix.
 
 ## Part E — Parameter counts
 

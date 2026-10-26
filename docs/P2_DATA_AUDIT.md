@@ -3,7 +3,8 @@
 **Project:** Temporal SCMVC — P2
 **Author:** Fahad Ali Abbasi
 **Supervisor:** Yllka Velaj
-**Status:** Sections A and B complete; C–E pending.
+**Status:** Sections A–D complete; Part E pending.
+**Last updated:** October 26, 2026
 **Last updated:** _(fill in date)_
 
 ---

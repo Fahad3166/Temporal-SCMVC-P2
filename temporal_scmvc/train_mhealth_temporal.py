@@ -195,7 +195,8 @@ for epoch in range(1, args.con_epochs + 1):
 
     acc, nmi, pur = valid(
         model, device, dataset, view, data_size, class_num,
-        eval_h=True, epoch=epoch
+        eval_h=True, epoch=epoch,
+        kmeans_seed=args.seed, kmeans_n_init=10,
     )
 
     scheduler.step(acc)

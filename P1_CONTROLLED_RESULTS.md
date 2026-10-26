@@ -84,34 +84,34 @@ train_temporal_mlp.py (was already correct)
 > only to demonstrate that the k-means seed fix changes results in a
 > measurable way. They are not directly comparable to the main table.
 
-Dataset	Seed	Before	After	Δ
+Dataset	 Seed	  Before	    After	       Δ
 
 
-MHEALTH	0	0.5292	0.5108	−0.018
+MHEALTH	  0	       0.5292	     0.5108	    −0.018
 
 
-MHEALTH	1	0.5228	0.5246	+0.002
+MHEALTH	  1	       0.5228	     0.5246. 	+0.002
 
 
-MHEALTH	2	0.4834	0.5014	+0.018
+MHEALTH	  2	       0.4834	      0.5014	+0.018
 
 
-PAMAP2	0	0.3678	0.3784	+0.011
+PAMAP2	  0	       0.3678	      0.3784	+0.011
 
 
-PAMAP2	1	0.4004	0.3948	−0.006
+PAMAP2	  1	      0.4004         0.3948	     −0.006
 
 
-PAMAP2	2	0.3796	0.3832	+0.004
+PAMAP2	  2	      0.3796	     0.3832	     +0.004
 
 
-WISDM	0	0.2346	0.2144	−0.020
+WISDM	  0	      0.2346	     0.2144   	−0.020
 
 
-WISDM	1	0.2294	0.2326	+0.003
+WISDM	  1	       0.2294.     	0.2326	   +0.003
 
 
-WISDM	2	0.2306	0.2090	−0.022
+WISDM	   2	   0.2306	    0.2090	   −0.022
 
 
 Interpretation: shifts are small (0.002–0.022) but real. Notably, MHEALTH seed variance widened (0.4834–0.5292 before → 0.5014–0.5246 after). This confirms the previous narrow spread was partially an artifact of the fixed k-means seed the fix makes the variance estimate more honest.

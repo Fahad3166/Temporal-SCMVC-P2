@@ -1,0 +1,173 @@
+======================================================================
+GENERAL SCMVC-TCN
+======================================================================
+Dataset        : har
+Selected views : all
+Max samples    : 5000
+Sample strategy: stratified
+Seed           : 2
+KMeans seed    : 2
+KMeans n_init  : 10
+Device         : mps
+Loaded HAR temporal data from: /Users/fahad/Documents/MY#Documents/FAHAD ALI/Uni Wien/7th Semster/P_2/Temporal-SCMVC-P2/HAR_dataset/UCI HAR Dataset
+HAR split: train, view_mode: groups
+Unique labels: [0 1 2 3 4 5]
+View 1 shape: (5000, 128, 3)
+View 2 shape: (5000, 128, 3)
+View 3 shape: (5000, 128, 3)
+[save_window_indices] wrote /Users/fahad/Documents/MY#Documents/FAHAD ALI/Uni Wien/7th Semster/P_2/Temporal-SCMVC-P2/p2_results/indices/har_seed2_indices.npz
+----------------------------------------------------------------------
+dims           : [3, 3, 3]
+views          : 3
+data_size      : 5000
+class_num      : 6
+seq_len        : 128
+batch_size     : 128
+local loss     : 0.0
+local chunk    : disabled
+parameters     : 4582336 trainable / 4582336 total
+======================================================================
+PRETRAINING
+======================================================================
+[Pretrain] Epoch   1 Loss: 3.261804
+[Pretrain] Epoch   2 Loss: 2.780850
+[Pretrain] Epoch   3 Loss: 2.499747
+[Pretrain] Epoch   4 Loss: 2.383737
+[Pretrain] Epoch   5 Loss: 2.309633
+[Pretrain] Epoch   6 Loss: 2.260312
+[Pretrain] Epoch   7 Loss: 2.225469
+[Pretrain] Epoch   8 Loss: 2.201229
+[Pretrain] Epoch   9 Loss: 2.190198
+[Pretrain] Epoch  10 Loss: 2.168205
+[Pretrain] Epoch  11 Loss: 2.157788
+[Pretrain] Epoch  12 Loss: 2.142570
+[Pretrain] Epoch  13 Loss: 2.129694
+[Pretrain] Epoch  14 Loss: 2.117713
+[Pretrain] Epoch  15 Loss: 2.111299
+[Pretrain] Epoch  16 Loss: 2.102616
+[Pretrain] Epoch  17 Loss: 2.097504
+[Pretrain] Epoch  18 Loss: 2.089108
+[Pretrain] Epoch  19 Loss: 2.079071
+[Pretrain] Epoch  20 Loss: 2.065182
+[Pretrain] Epoch  21 Loss: 2.051063
+[Pretrain] Epoch  22 Loss: 2.033767
+[Pretrain] Epoch  23 Loss: 2.005231
+[Pretrain] Epoch  24 Loss: 1.965386
+[Pretrain] Epoch  25 Loss: 1.920169
+[Pretrain] Epoch  26 Loss: 1.887494
+[Pretrain] Epoch  27 Loss: 1.857636
+[Pretrain] Epoch  28 Loss: 1.830380
+[Pretrain] Epoch  29 Loss: 1.808110
+[Pretrain] Epoch  30 Loss: 1.776093
+Reduced learning rate to: 0.000030
+======================================================================
+CONTRASTIVE TRAINING
+======================================================================
+[Train]    Epoch   1 Loss: 6.582592
+Epoch   1 | ACC: 0.5200 | NMI: 0.4999 | ARI: 0.3862 | PUR: 0.5294
+[Train]    Epoch   2 Loss: 6.411725
+Epoch   2 | ACC: 0.5284 | NMI: 0.5250 | ARI: 0.4075 | PUR: 0.5438
+[Train]    Epoch   3 Loss: 6.261408
+Epoch   3 | ACC: 0.5242 | NMI: 0.5314 | ARI: 0.4142 | PUR: 0.5448
+[Train]    Epoch   4 Loss: 6.152381
+Epoch   4 | ACC: 0.5212 | NMI: 0.5348 | ARI: 0.4181 | PUR: 0.5406
+[Train]    Epoch   5 Loss: 6.069895
+Epoch   5 | ACC: 0.5242 | NMI: 0.5391 | ARI: 0.4231 | PUR: 0.5420
+[Train]    Epoch   6 Loss: 6.013107
+Epoch   6 | ACC: 0.5206 | NMI: 0.5374 | ARI: 0.4209 | PUR: 0.5396
+[Train]    Epoch   7 Loss: 5.963848
+Epoch   7 | ACC: 0.5178 | NMI: 0.5380 | ARI: 0.4185 | PUR: 0.5390
+[Train]    Epoch   8 Loss: 5.930981
+Epoch   8 | ACC: 0.5234 | NMI: 0.5433 | ARI: 0.4230 | PUR: 0.5408
+[Train]    Epoch   9 Loss: 5.898206
+Epoch   9 | ACC: 0.5168 | NMI: 0.5406 | ARI: 0.4193 | PUR: 0.5398
+[Train]    Epoch  10 Loss: 5.870868
+Epoch  10 | ACC: 0.5206 | NMI: 0.5419 | ARI: 0.4175 | PUR: 0.5422
+[Train]    Epoch  11 Loss: 5.849394
+Epoch  11 | ACC: 0.5118 | NMI: 0.5682 | ARI: 0.4908 | PUR: 0.5552
+[Train]    Epoch  12 Loss: 5.827500
+Epoch  12 | ACC: 0.5142 | NMI: 0.5700 | ARI: 0.4916 | PUR: 0.5558
+[Train]    Epoch  13 Loss: 5.797775
+Epoch  13 | ACC: 0.5122 | NMI: 0.5709 | ARI: 0.4917 | PUR: 0.5556
+[Train]    Epoch  14 Loss: 5.791232
+Epoch  14 | ACC: 0.5120 | NMI: 0.5688 | ARI: 0.4910 | PUR: 0.5546
+[Train]    Epoch  15 Loss: 5.770153
+Epoch  15 | ACC: 0.5140 | NMI: 0.5720 | ARI: 0.4927 | PUR: 0.5566
+[Train]    Epoch  16 Loss: 5.762392
+Epoch  16 | ACC: 0.5132 | NMI: 0.5694 | ARI: 0.4909 | PUR: 0.5540
+[Train]    Epoch  17 Loss: 5.752862
+Epoch  17 | ACC: 0.5138 | NMI: 0.5709 | ARI: 0.4918 | PUR: 0.5532
+[Train]    Epoch  18 Loss: 5.744285
+Epoch  18 | ACC: 0.5122 | NMI: 0.5691 | ARI: 0.4909 | PUR: 0.5538
+[Train]    Epoch  19 Loss: 5.733845
+Epoch  19 | ACC: 0.5112 | NMI: 0.5702 | ARI: 0.4913 | PUR: 0.5540
+[Train]    Epoch  20 Loss: 5.718684
+Epoch  20 | ACC: 0.5112 | NMI: 0.5678 | ARI: 0.4897 | PUR: 0.5528
+[Train]    Epoch  21 Loss: 5.716995
+Epoch  21 | ACC: 0.5112 | NMI: 0.5651 | ARI: 0.4868 | PUR: 0.5520
+[Train]    Epoch  22 Loss: 5.705959
+Epoch  22 | ACC: 0.5094 | NMI: 0.5656 | ARI: 0.4874 | PUR: 0.5516
+[Train]    Epoch  23 Loss: 5.696660
+Epoch  23 | ACC: 0.5098 | NMI: 0.5646 | ARI: 0.4855 | PUR: 0.5516
+[Train]    Epoch  24 Loss: 5.682544
+Epoch  24 | ACC: 0.5090 | NMI: 0.5624 | ARI: 0.4848 | PUR: 0.5502
+[Train]    Epoch  25 Loss: 5.677916
+Epoch  25 | ACC: 0.5108 | NMI: 0.5641 | ARI: 0.4853 | PUR: 0.5516
+[Train]    Epoch  26 Loss: 5.674419
+Epoch  26 | ACC: 0.5096 | NMI: 0.5598 | ARI: 0.4822 | PUR: 0.5504
+[Train]    Epoch  27 Loss: 5.661559
+Epoch  27 | ACC: 0.5094 | NMI: 0.5596 | ARI: 0.4818 | PUR: 0.5500
+[Train]    Epoch  28 Loss: 5.664157
+Epoch  28 | ACC: 0.5094 | NMI: 0.5596 | ARI: 0.4813 | PUR: 0.5502
+[Train]    Epoch  29 Loss: 5.662698
+Epoch  29 | ACC: 0.5098 | NMI: 0.5597 | ARI: 0.4816 | PUR: 0.5502
+[Train]    Epoch  30 Loss: 5.656556
+Epoch  30 | ACC: 0.5098 | NMI: 0.5584 | ARI: 0.4792 | PUR: 0.5508
+[Train]    Epoch  31 Loss: 5.649368
+Epoch  31 | ACC: 0.5082 | NMI: 0.5561 | ARI: 0.4773 | PUR: 0.5502
+[Train]    Epoch  32 Loss: 5.647173
+Epoch  32 | ACC: 0.5088 | NMI: 0.5563 | ARI: 0.4767 | PUR: 0.5496
+[Train]    Epoch  33 Loss: 5.636676
+Epoch  33 | ACC: 0.5076 | NMI: 0.5542 | ARI: 0.4758 | PUR: 0.5496
+[Train]    Epoch  34 Loss: 5.636280
+Epoch  34 | ACC: 0.5064 | NMI: 0.5555 | ARI: 0.4766 | PUR: 0.5502
+[Train]    Epoch  35 Loss: 5.634589
+Epoch  35 | ACC: 0.5262 | NMI: 0.5579 | ARI: 0.4425 | PUR: 0.5474
+[Train]    Epoch  36 Loss: 5.628845
+Epoch  36 | ACC: 0.5246 | NMI: 0.5579 | ARI: 0.4423 | PUR: 0.5454
+[Train]    Epoch  37 Loss: 5.625181
+Epoch  37 | ACC: 0.5248 | NMI: 0.5583 | ARI: 0.4426 | PUR: 0.5462
+[Train]    Epoch  38 Loss: 5.626301
+Epoch  38 | ACC: 0.5236 | NMI: 0.5572 | ARI: 0.4411 | PUR: 0.5446
+[Train]    Epoch  39 Loss: 5.623292
+Epoch  39 | ACC: 0.5234 | NMI: 0.5572 | ARI: 0.4405 | PUR: 0.5448
+[Train]    Epoch  40 Loss: 5.624123
+Epoch  40 | ACC: 0.5214 | NMI: 0.5554 | ARI: 0.4394 | PUR: 0.5450
+[Train]    Epoch  41 Loss: 5.619101
+Epoch  41 | ACC: 0.5224 | NMI: 0.5549 | ARI: 0.4381 | PUR: 0.5442
+[Train]    Epoch  42 Loss: 5.613257
+Epoch  42 | ACC: 0.5228 | NMI: 0.5551 | ARI: 0.4395 | PUR: 0.5442
+[Train]    Epoch  43 Loss: 5.610987
+Epoch  43 | ACC: 0.5232 | NMI: 0.5551 | ARI: 0.4386 | PUR: 0.5444
+[Train]    Epoch  44 Loss: 5.610833
+Epoch  44 | ACC: 0.5214 | NMI: 0.5556 | ARI: 0.4381 | PUR: 0.5444
+[Train]    Epoch  45 Loss: 5.605935
+Epoch  45 | ACC: 0.5180 | NMI: 0.5533 | ARI: 0.4361 | PUR: 0.5438
+[Train]    Epoch  46 Loss: 5.604168
+Epoch  46 | ACC: 0.5214 | NMI: 0.5536 | ARI: 0.4367 | PUR: 0.5442
+[Train]    Epoch  47 Loss: 5.601475
+Epoch  47 | ACC: 0.5210 | NMI: 0.5533 | ARI: 0.4365 | PUR: 0.5442
+[Train]    Epoch  48 Loss: 5.602665
+Epoch  48 | ACC: 0.5212 | NMI: 0.5537 | ARI: 0.4362 | PUR: 0.5440
+[Train]    Epoch  49 Loss: 5.601692
+Epoch  49 | ACC: 0.5238 | NMI: 0.5527 | ARI: 0.4333 | PUR: 0.5440
+[Train]    Epoch  50 Loss: 5.602651
+Epoch  50 | ACC: 0.5206 | NMI: 0.5539 | ARI: 0.4365 | PUR: 0.5446
+======================================================================
+FINAL RESULTS
+======================================================================
+Best epoch : 2
+Best ACC   : 0.5284
+Best NMI   : 0.5250
+Best ARI   : 0.4075
+Best PUR   : 0.5438
